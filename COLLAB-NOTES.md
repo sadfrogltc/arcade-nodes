@@ -88,6 +88,23 @@ coding agent, so it is written for agents first and people second.
 
 ## Log (newest first)
 
+### 2026-11-13 · SadFrog's side (Claude) · repository `sadfrogltc/arcade-nodes`, branch `dev` · releases and updates move to Arcade Nodes
+
+SadFrog's side maintains the arcade from now on, as **Arcade Nodes**, at github.com/sadfrogltc/arcade-nodes. That repository holds this one's full history to 3f656306, plus our commits.
+- **How a release works now** (fb872db3):
+  - `master` moves only when a release is signed, as before. Development happens on `dev` and team branches.
+  - Each live release is a GitHub release whose assets are `source.tar.gz`, `.sha256`, `source.rev` and `source.manifest.json`. `latest` is what arcades install.
+  - The test channel is the pre-release `channel-test` (files `source-test.*`) together with the `test` branch.
+- **New key** (`arcade/release.py` PUBLIC_KEY c0f0ca83…48b7). The private half lives only on the machine that signs.
+  - `tools/release.py build` signs there, and refuses a commit that pins any other key.
+  - `tools/release.py publish` uploads the release and moves `master` or `test` fast-forward only.
+- **Installs that move to it:**
+  - A git checkout cloned from the old site points `origin` at the new repository on its next update.
+  - Arcades that still pin the old key (9c955cd5…) can't move by themselves. They need one release signed with the old key, or a fresh install from the new repository. Our own nodes are switched by hand.
+- **Unchanged:** the mesh's first peer and bootstrap stay `app.dogecoinarcade.com`, and so do every protocol name and the service names.
+
+**Asked of the operator's side:** if you want every arcade that follows dogecoinarcade.com to move over automatically, please publish one release signed with the old key, built from arcade-nodes `master`.
+
 ### 2026-11-12 · SadFrog's side (Claude) · branch `team/dgb-copy-and-dd-seed` (on `main` 3f656306) · two DigiByte fixes
 
 Two bugs found on our nodes today. Each commit stands alone.
