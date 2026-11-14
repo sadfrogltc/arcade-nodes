@@ -49,18 +49,19 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-#: Where an installed copy fetches updates from. The repository is served over
-#: plain HTTP from the site, so `git clone` and `git pull` both work with no
-#: account, no key and no forge.
-REPO_URL = "https://dogecoinarcade.com/repo"
+#: Where an installed copy fetches updates from: Arcade Nodes' public repository
+#: (2026-11-13; it was the old site's repo). `git clone` and `git pull` work with
+#: no account and no key. Its `master` moves only when a release is signed.
+REPO_URL = "https://github.com/sadfrogltc/arcade-nodes.git"
+RELEASES_URL = "https://github.com/sadfrogltc/arcade-nodes/releases"
 
 #: The same code as a plain archive, for machines with no git. Windows is why:
 #: git is a separate 60 MB download there, and a user who installs it still has
 #: a terminal holding the old PATH, so the installer cannot see it even after
 #: they have done what it asked. The archive needs nothing but this script.
-ARCHIVE_URL = "https://dogecoinarcade.com/source.tar.gz"
-ARCHIVE_SUMS_URL = "https://dogecoinarcade.com/source.tar.gz.sha256"
-REVISION_URL = "https://dogecoinarcade.com/source.rev"
+ARCHIVE_URL = RELEASES_URL + "/latest/download/source.tar.gz"
+ARCHIVE_SUMS_URL = RELEASES_URL + "/latest/download/source.tar.gz.sha256"
+REVISION_URL = RELEASES_URL + "/latest/download/source.rev"
 #: Where a new node gets its index (2026-09-28: "the installer installs
 #: the most current version ... with the most recent bootstrap"): the live
 #: node's own published copies, remade whenever they go stale (bootstrap.py).
@@ -262,7 +263,7 @@ def bindir(system: str) -> Path:
 
 #: Cloudflare in front of the site refuses `Python-urllib/3.x` with a 403, so
 #: every fetch names itself (D-066).
-USER_AGENT = "DogecoinArcade installer (+https://dogecoinarcade.com)"
+USER_AGENT = "ArcadeNodes installer (+https://arcade-nodes.com)"
 
 
 def _request(url: str):
@@ -1765,7 +1766,7 @@ def write_repair(venv: Path, system: str | None = None) -> Path:
         REPAIR.replace("@@VENV@@", str(venv))
               .replace("@@PYTHON@@", str(python))
               .replace("@@SOURCE@@", str(repair_source(venv)))
-              .replace("@@SITE@@", "https://dogecoinarcade.com")
+              .replace("@@SITE@@", "https://github.com/sadfrogltc/arcade-nodes")
     )
     return path
 

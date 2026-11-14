@@ -474,6 +474,7 @@ def _git_node(tmp_path, monkeypatch, pub, signed, published=1000.0, installed=No
     (home / "venv" / "bin").mkdir(parents=True)
     _git("clone", "-q", str(pub), str(home / "src"), cwd=tmp_path)
     monkeypatch.setattr(update, "HOME", home)
+    monkeypatch.setattr(update, "REPO_URL", str(pub))
     monkeypatch.setattr(update, "following", lambda: "live")
     if installed is not None:
         update._remember({"published": installed})
@@ -510,6 +511,22 @@ def test_a_git_node_moves_to_the_signed_commit_not_the_branch_tip(tmp_path, monk
     assert _git("rev-parse", "HEAD", cwd=mine) == release
     assert (mine / "a.txt").read_text() == "the signed release"
     assert json.loads((update.HOME / update.INSTALLED_FILE).read_text())["revision"] == release, "remembered"
+
+
+def test_a_git_node_cloned_from_the_old_repository_fetches_from_the_new_one(tmp_path, monkeypatch):
+    """2026-11-13, Arcade Nodes: releases come from a new repository. A checkout cloned from the old one is pointed at
+    REPO_URL and gets the signed release from there; the old one is not asked."""
+    old = _published(tmp_path, "one")
+    mine = _git_node(tmp_path, monkeypatch, old, "00" * 20)
+    new = tmp_path / "new"
+    _git("clone", "-q", str(old), str(new), cwd=tmp_path)
+    release = _commit(new, "released from the new repository")
+    shutil.rmtree(old)
+    monkeypatch.setattr(update, "REPO_URL", str(new))
+    _signed_release(monkeypatch, release, 2000.0)
+    assert update.update(dry_run=False) == 0
+    assert _git("remote", "get-url", "origin", cwd=mine) == str(new)
+    assert _git("rev-parse", "HEAD", cwd=mine) == release
 
 
 def test_an_unsigned_tip_alone_is_never_installed(tmp_path, monkeypatch):
@@ -672,7 +689,7 @@ def test_a_git_node_on_test_fast_forwards_onto_the_test_branch(tmp_path, monkeyp
     monkeypatch.setattr(update, "_run", lambda *a, **k: ran.append(a) or (Not() if "merge-base" in a else Done()))
     monkeypatch.setattr(update.subprocess, "run", lambda argv, **k: Done())
     assert update.update(dry_run=False) == 0
-    git = [a[1:] for a in ran if a[0] == "git"]
+    git = [a[1:] for a in ran if a[0] == "git" and a[1] != "remote"]
     assert git[:4] == [("merge-base", "--is-ancestor", SIGNED, "HEAD"), ("fetch", "--quiet", "origin", "test"),
                        ("cat-file", "-e", SIGNED + "^{commit}"), ("merge", "--ff-only", "--quiet", SIGNED)]
     assert ("pull", "--ff-only", "--quiet") not in git

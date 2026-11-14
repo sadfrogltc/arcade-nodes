@@ -35,7 +35,11 @@ from typing import Any
 #: it a pin rather than a suggestion: an attacker who can write to the website
 #: cannot hand out a new public key, because every installed copy already has
 #: this one.
-PUBLIC_KEY = "9c955cd5c945d72775f2fa8592b13f5098285d1205edd0be2cca11591b2a008a"
+#:
+#: 2026-11-13: Arcade Nodes' key (SadFrog's side maintains the arcade now; releases come from
+#: github.com/sadfrogltc/arcade-nodes). An installation still on the old key, 9c955cd5..., moves to this one by a
+#: release signed with that key, or by installing again from the new repository.
+PUBLIC_KEY = "c0f0ca83ebfe5deeaf8de6d92d90b65ca1c5c7325dc1ffa95613b984bf1448b7"
 
 #: What a signed manifest is called beside the archive it describes.
 MANIFEST = "source.manifest.json"
@@ -164,10 +168,10 @@ def verify(manifest: str | bytes | dict, public_key: str | None = None) -> dict[
     except BadSignatureError:
         raise ReleaseError(
             "the release manifest is not signed by the key this installation "
-            "trusts. Either it was not published by DogecoinArcade, or the "
+            "trusts. Either it was not published by Arcade Nodes, or the "
             "signing key has changed and this copy is too old to know it. "
-            "Install again from https://dogecoinarcade.com and read what it "
-            "says before you do") from None
+            "Install again from https://github.com/sadfrogltc/arcade-nodes and "
+            "read what it says before you do") from None
     except (ValueError, TypeError) as exc:
         raise ReleaseError(f"the release signature is not readable: {exc}") from None
     return body

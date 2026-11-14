@@ -34,13 +34,19 @@ from pathlib import Path
 
 from . import release as releaselib
 
-REPO_URL = "https://dogecoinarcade.com/repo"
+#: Where releases come from (2026-11-13: SadFrog's side maintains the arcade now, as Arcade Nodes): the repository's
+#: `master` moves only when a release is signed, as the old site's did, and every release's files are assets of a
+#: GitHub release. `latest` is the newest live one; the test channel's files sit on the pre-release tagged
+#: `channel-test`, replaced at each test release. Signed with the key pinned in arcade/release.py.
+REPO_URL = "https://github.com/sadfrogltc/arcade-nodes.git"
+RELEASES_URL = "https://github.com/sadfrogltc/arcade-nodes/releases"
+SITE_URL = "https://github.com/sadfrogltc/arcade-nodes"
 #: The archive the installer falls back to when there is no git (see
 #: installer/install.py). An installation made that way has no .git, so both
 #: "what is installed" and "what is published" have to be read another way.
-REVISION_URL = "https://dogecoinarcade.com/source.rev"
-ARCHIVE_URL = "https://dogecoinarcade.com/source.tar.gz"
-MANIFEST_URL = "https://dogecoinarcade.com/" + releaselib.MANIFEST
+REVISION_URL = RELEASES_URL + "/latest/download/source.rev"
+ARCHIVE_URL = RELEASES_URL + "/latest/download/source.tar.gz"
+MANIFEST_URL = RELEASES_URL + "/latest/download/" + releaselib.MANIFEST
 REVISION_FILE = ".revision"
 #: What was installed last, and when it was published. Kept outside the
 #: checkout, because the checkout is replaced wholesale by an update.
@@ -57,9 +63,10 @@ CHANNELS = ("live", "test")
 #: Where the test channel is published, beside the live files: the published repository's `test` branch, and an
 #: archive, its revision and its signed manifest named like live's with "-test".
 TEST_BRANCH = "test"
-TEST_ARCHIVE_URL = "https://dogecoinarcade.com/source-test.tar.gz"
-TEST_REVISION_URL = "https://dogecoinarcade.com/source-test.rev"
-TEST_MANIFEST_URL = "https://dogecoinarcade.com/source-test.manifest.json"
+TEST_RELEASE_TAG = "channel-test"
+TEST_ARCHIVE_URL = RELEASES_URL + f"/download/{TEST_RELEASE_TAG}/source-test.tar.gz"
+TEST_REVISION_URL = RELEASES_URL + f"/download/{TEST_RELEASE_TAG}/source-test.rev"
+TEST_MANIFEST_URL = RELEASES_URL + f"/download/{TEST_RELEASE_TAG}/source-test.manifest.json"
 #: Why the last check follows another channel than the one chosen (the test channel not published yet), for Admin.
 followed_note = ""
 
@@ -69,7 +76,7 @@ followed_note = ""
 #: published: curl got it, the updater got 403, and an automatic update that
 #: cannot read the manifest installs nothing -- silently, on every machine
 #: (D-066).
-USER_AGENT = "DogecoinArcade (+https://dogecoinarcade.com)"
+USER_AGENT = "ArcadeNodes (+https://arcade-nodes.com)"
 
 
 def _request(url: str):
@@ -275,6 +282,15 @@ def _resync(git: str, checkout: Path, branch: str = "master", to: str = "FETCH_H
                 cwd=checkout).returncode == 0
 
 
+def _follow_repo(git: str, checkout: Path) -> None:
+    """The checkout's `origin` pointed at REPO_URL (2026-11-13: a checkout cloned from the old site fetched from it for
+    good, whatever the code it ran said). What is installed is still only the signed commit."""
+    said = _run(git, "remote", "get-url", "origin", cwd=checkout)
+    if said.returncode == 0 and said.stdout.strip() != REPO_URL:
+        if _run(git, "remote", "set-url", "origin", REPO_URL, cwd=checkout).returncode == 0:
+            print(f"  now fetching from {REPO_URL} (was {said.stdout.strip()})")
+
+
 def _has_commit(git: str, checkout: Path, commit: str) -> bool:
     return _run(git, "cat-file", "-e", f"{commit}^{{commit}}", cwd=checkout).returncode == 0
 
@@ -320,7 +336,7 @@ def update(dry_run: bool = False) -> int:
         if after is None:
             raise UpdateError(
                 f"could not fetch the source archive into {checkout}.\n"
-                "  Run the installer again from https://dogecoinarcade.com to "
+                f"  Run the installer again from {SITE_URL} to "
                 "repair this installation.")
         if not after:                                  # in place, its revision file unread: the signed one
             after = str(signed.get("revision") or "")
@@ -334,6 +350,7 @@ def update(dry_run: bool = False) -> int:
         # Only the signed release's own commit (2026-11-08, security review): a git node took whatever the branch
         # held, unsigned, so whoever could change what the repository serves ran code here. The signed manifest
         # names the commit (`revision`, the published HEAD), as it names the archive's hash.
+        _follow_repo(git, checkout)
         signed = _read_manifest(channel)
         wanted = _signed_commit(signed)
         branch = TEST_BRANCH if channel == "test" else "master"

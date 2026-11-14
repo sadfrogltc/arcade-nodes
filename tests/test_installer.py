@@ -366,7 +366,7 @@ def published(tmp_path, monkeypatch):
         # site's zone refuses Python-urllib's default header with a 403 that
         # no installation could act on (D-066).
         where = getattr(url, "full_url", url)
-        assert "DogecoinArcade" in getattr(url, "headers", {}).get("User-agent", ""), \
+        assert "ArcadeNodes" in getattr(url, "headers", {}).get("User-agent", ""), \
             "a program that downloads software should say what it is"
         if where not in served:
             raise urllib.error.URLError(f"not served: {where}")
